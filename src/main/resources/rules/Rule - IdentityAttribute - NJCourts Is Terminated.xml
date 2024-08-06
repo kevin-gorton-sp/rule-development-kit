@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule name="NJCourts Is Terminated" type="IdentityAttribute">
+  <Description>Calculates LCS based on start and end dates.</Description>
+  <Source><![CDATA[
+    String role_id = "fba2bb78e49a41a280399d7aeee3f64f";
+    if ((identity.getAssignedRole(role_id) != null)) {
+      return 1;
+    }
+    return 0;
+  ]]></Source>
+</Rule>

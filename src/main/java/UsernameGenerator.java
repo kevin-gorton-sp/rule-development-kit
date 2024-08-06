@@ -21,7 +21,7 @@ public class UsernameGenerator {
         firstName = StringUtils.trimToNull(firstName);
         lastName = StringUtils.trimToNull(lastName);
         String otherName = identity.getStringAttribute("otherName");
-
+idn.findIdentitiesBySearchableIdentityAttribute(otherName, firstName, lastName, otherName)
         if(firstName != null) {
             firstName = firstName.replaceAll("[^a-zA-Z0-9]", "");
         }

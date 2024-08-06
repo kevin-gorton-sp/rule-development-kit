@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule name="DecipheraEmployeeNumberGenerator" type="AttributeGenerator">
+    <Description>Generate a unique username for Active Directory.</Description>
+    <Source><![CDATA[
+        import sailpoint.object.Application;
+        import sailpoint.object.Field;
+        import sailpoint.object.Identity;
+        import sailpoint.rule.Account;
+        import sailpoint.server.IdnRuleUtil;
+        import sailpoint.tools.GeneralException;
+        import sailpoint.tools.Util;
+
+        public String generateEmployeeNumber(String workerType) throws GeneralException {
+            String applicationName = application.getName();
+            String identityName = identity.getName();
+            String attributeName = "employeeType";
+            Object attributeValue = identity.getAttribute("workerTypeDescription");
+            List accounts = idn.findAccountsByAttribute(applicationName, identityName, attributeName, attributeValue);
+
+            sortList(accounts);
+            return null;
+        }
+    
+        public List sortList(List accounts) {
+            Collections.sort(accounts, new Comparator() {
+                public int compare(Account o1, Account o2) {
+                    // compare two instance of `Score` and return `int` as result.
+                    return Util.otos(o2.getAttributes().get("employeeId")).compareTo(Util.otos(o1.getAttributes().get("employeeId")));
+                    // return o2.getScores().get(0).compareTo(o1.getScores().get(0));
+                }
+            });
+   
+            return accounts;
+        }
+
+        String workerType = Util.otos(identity.getAttribute("workerType"));
+        log.debug("Worker type: " + workerType);
+        return generateEmployeeNumber(workerType);
+  ]]></Source>
+</Rule>

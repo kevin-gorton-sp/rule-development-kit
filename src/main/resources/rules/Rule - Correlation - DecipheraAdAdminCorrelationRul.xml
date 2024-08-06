@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule name="DecipheraAdAdminCorrelationRule" type="Correlation">
+  <Description>Correlates based the sAMAccountName from AD minus the "adm-" string prefix.</Description>
+  <Source><![CDATA[
+    import java.util.Map;
+
+    Map returnMap = new HashMap();
+    String newSAMAccountName = null;
+    Map attributes = account.getAttributes();
+    if (attributes != null && attributes.containsKey("sAMAccountName")) {
+      newSAMAccountName = (String)attributes.get("sAMAccountName");
+    }
+    log.debug("sAMAccountName: " + newSAMAccountName);
+    String parseString = newSAMAccountName.substring(0, 4);
+
+    if (parseString.equals("adm-")) {
+      newSAMAccountName = newSAMAccountName.substring(4);
+    }
+
+    returnMap.put("identityAttributeName", "sAMAccountName");
+    returnMap.put("identityAttributeValue", newSAMAccountName);
+
+    return returnMap;
+
+  ]]></Source>
+</Rule>

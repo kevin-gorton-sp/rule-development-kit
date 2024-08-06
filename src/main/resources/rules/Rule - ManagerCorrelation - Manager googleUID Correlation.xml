@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule name="Manager googleUID Correlation" type="ManagerCorrelation">
+  <Description>Finds a manager based on the manager.email attribute.</Description>
+  <Source><![CDATA[
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+public Map getCorrelation() {
+    HashMap returnMap = new HashMap();
+        String identityAttributeName = "uid";
+        String identityAttributeValue = "break.glass1";
+     
+        String managerId = (String) link.getAttribute("manager_id");
+        
+        if (idn.findIdentitiesBySearchableIdentityAttribute("googleUid", "Equals", managerId, "uid").size() > 0) {
+            List identities = idn.findIdentitiesBySearchableIdentityAttribute("googleUid", "Equals", managerId, "uid");
+            if (null != identities && null != identities.get(0)) {
+                sailpoint.rule.Identity currentIdentity = identities.get(0);
+                Map identityAttributes = currentIdentity.getAttributes();
+                String googleId = (String) identityAttributes.get("googleUid");
+                identityAttributeName = "googleUid";
+                identityAttributeValue = googleId;
+            } 
+        }
+     
+        returnMap.put("identityAttributeName", identityAttributeName);
+        returnMap.put("identityAttributeValue", identityAttributeValue);
+     
+        return returnMap;
+    }
+    return getCorrelation();
+    
+  ]]></Source>
+</Rule>

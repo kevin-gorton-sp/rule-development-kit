@@ -1,0 +1,157 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule name="Epic Linked Template Config" type="BeforeProvisioning">
+    <Description>Before Provisioning Rule which changes disables and enables to a modify.</Description>
+    <Source><![CDATA[
+      import java.text.SimpleDateFormat;
+      import java.util.Date;
+      import java.util.List;
+      import java.util.Map;
+      import sailpoint.object.Application;
+      import sailpoint.object.ProvisioningPlan;
+      import sailpoint.object.ManagedAttribute.Type;
+      import sailpoint.object.ProvisioningPlan.AccountRequest;
+      import sailpoint.object.ProvisioningPlan.AttributeRequest;
+      import sailpoint.object.ProvisioningPlan.Operation;
+      import sailpoint.rule.Account;
+      import sailpoint.rule.ManagedAttributeDetails;
+      import sailpoint.server.IdnRuleUtil;
+      import sailpoint.tools.GeneralException;
+      import sailpoint.object.Identity;
+
+      Identity identity = plan.getIdentity();
+  String defaultLinkedTemplateIDName = "Epic DefaultLinkedTemplateID [source]";
+
+  /**
+   * 
+   * @param id
+   * @return
+   */
+  private String getLinkedTemplateName(String id) {
+    log.debug("Acessing and retrieveing linked template by LinkedTemplateID: " + id);
+    // COMPLETED need to use correct Attribute of LinkedTemplateID from Plan
+    // Get details of LinkedTemplate object by LinkedTemplateID
+    ManagedAttributeDetails linkedTemplateDetails = idn.getManagedAttributeDetails(application.getId(),
+        "LinkedTemplateID", id, Type.Entitlement);
+    // COMPLETED Add Checking here.
+    // Get the attributes and name fom the LinkedTemplates entitlement object
+    Map linkedTemplateAttributes = linkedTemplateDetails != null ? linkedTemplateDetails.getAttributes() : null;
+    String linkedTemplateName = linkedTemplateAttributes != null && linkedTemplateAttributes.containsKey("displayName")
+        ? (String) linkedTemplateAttributes.get("displayName")
+        : null;
+    return linkedTemplateName;
+  }
+
+  /*
+   * Gets Login Type from Source defaultLinkedTemplateIDName
+   * ("Epic DefaultLinkedTemplateID [source]")
+   */
+
+  /**
+   * Gets Login Type from Source defaultLinkedTemplateIDName
+   * ("Epic DefaultLinkedTemplateID [source]")
+   * 
+   * @param name defaultLinkedTemplateIDName
+   * @return loginType
+   * @throws GeneralException
+   */
+  private String getLoginType(String name) throws GeneralException {
+    log.debug("Accessing Login Type reference lookup at " + defaultLinkedTemplateIDName);
+    // Get record from account Source by its Display Name
+    Account loginTypeAccount = idn.getAccountByDisplayName(defaultLinkedTemplateIDName, name);
+    Map loginTypeAttributes = loginTypeAccount != null ? loginTypeAccount.getAttributes() : null;
+    String loginType = loginTypeAttributes != null ? (String) loginTypeAttributes.get("LoginType") : "";
+    return loginType;
+  }
+
+  private void processPlan() throws GeneralException {
+    log.error("EPIC LinkedTemplateConfig Before Provisioning -- Entering");
+
+    for (AccountRequest accountRequest : plan.getAccountRequests()) {
+      log.debug("=======================");
+      log.debug("Executing Account Request for '" + accountRequest.toString());
+      AttributeRequest linkedTemplate = accountRequest.getAttributeRequest("LinkedTemplateID");
+      log.debug("linkedTemplate: " + linkedTemplate);
+      String linkedTemplateId = (String) linkedTemplate.getValue();
+      log.debug("linkedTemplateId: " + linkedTemplateId);
+      Operation linkedTemplateOp = linkedTemplateId != null ? linkedTemplate.getOp() : null;
+      log.debug("linkedTemplateOp: " + linkedTemplateOp.toString());
+      String linkedTemplateName = linkedTemplateId != null ? getLinkedTemplateName(linkedTemplateId) : null;
+      log.debug("linkedTemplateName: " + linkedTemplateName);
+      String loginType = getLoginType(linkedTemplateName);
+      log.debug("loginType: " + loginType);
+      SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+      String nowDate = formatter.format(new Date());
+      log.debug("=======================");
+
+      if (linkedTemplateOp.equals(ProvisioningPlan.Operation.Add)) {
+        log.debug("Adding entitlement to Provisioning Plan");
+
+        String templateConfigValue = linkedTemplateId + "#" + nowDate + "##" + loginType;
+        // Add the LinkedTemplateConfig to the Provisioning
+        log.debug("TemplateConfig Value is:" + templateConfigValue);
+        accountRequest
+            .add(new AttributeRequest("LinkedTemplateConfig", ProvisioningPlan.Operation.Add, templateConfigValue));
+        // TODO might have to add Account request to plan
+      } else if (linkedTemplateOp.equals(ProvisioningPlan.Operation.Remove)) {
+        log.debug("Removing/Updating Entitlement from Provisioning Plan");
+        Account account = idn.getAccountByNativeIdentity(application.getName(), accountRequest.getNativeIdentity());
+        // Map accountAttributes = account.getAttributes();
+        // List currentLTCs = (List) accountAttributes.get("LinkedTemplateConfig");
+        
+        List currentLTCs = (List) idn.getRawAccountAttribute(account, "linkedTemplateConfig");
+        // TODO need to find in list STARTING WITH LinkedTemplateID.
+        String ltcToRemove = "";
+        log.debug("Getting all Linked Template Configs");
+        for (Object currentLTC : currentLTCs) {
+          log.error(currentLTC);
+          if (currentLTC.toString().startsWith(linkedTemplateId)) {
+            ltcToRemove = currentLTC.toString();
+          }
+        }
+        if (ltcToRemove != "") {
+          log.debug("Removing LinkedTemplateConfig: " + ltcToRemove);
+          // Add Remove to Account Request Plan
+          accountRequest
+              .add(new AttributeRequest("LinkedTemplateConfig", ProvisioningPlan.Operation.Remove, ltcToRemove));
+          // update String to Add EndDate
+          String[] split = ltcToRemove.split("#");
+          split[2] = nowDate;
+          String newLTC = String.join("#", split);
+          log.debug("Adding LinkedTemplateConfig: " + newLTC);
+          // Add Add to Account Request Plan
+          accountRequest
+              .add(new AttributeRequest("LinkedTemplateConfig", ProvisioningPlan.Operation.Add, newLTC));
+        }
+
+      } else {
+        log.error("Provisioning Plan Operation not handled: " + linkedTemplateOp.toString());
+      }
+
+      /*
+       * a. On Entitlement Add operations, it adds a value for the template to the
+       * LinkedTemplateConfig attribute, using NOW as the StartDate field, and a
+       * lookup for accounts in the aforementioned reference source for the LoginType
+       * field.
+       * b. On Entitlement Remove operations, it changes the operation to just update
+       * the LinkedTemplateConfig attribute with NOW as the EndDate field.
+       * c. On Account Disable operations, it updates the LinkedTemplateConfig
+       * attribute, for each template listed, with NOW as the EndDate field.
+       */
+
+    }
+    log.error("EPIC LinkedTemplateConfig Before Provisioning -- Exiting");
+  }
+
+try {
+  if (plan != null) {
+    processPlan();
+  } else { 
+    log.error("No Plan to process");
+  }
+  }catch(Exception e)
+{
+  log.error("Threw Exception: " + e.getMessage());
+}
+  ]]></Source>
+</Rule>

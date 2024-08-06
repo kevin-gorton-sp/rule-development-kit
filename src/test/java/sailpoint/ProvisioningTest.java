@@ -50,8 +50,5 @@ public class ProvisioningTest {
 
         log.info("Beanshell script returned: " + result);
 
-
-
-
     }
 }

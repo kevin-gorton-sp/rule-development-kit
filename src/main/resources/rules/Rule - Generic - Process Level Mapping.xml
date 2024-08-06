@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule name="Process Level Mapping">
+  <Description> This rule will recieve a Process Level and a attribute name to return 
+    Using transform for the generic rule 
+    {
+        "attributes": {
+            "name": "Process Level Mapping",
+            "processLevel": {
+                "type": "accountAttribute",
+                "attributes": {
+                    "attributeName": "[ProcessLevel attrubute]"
+                    "sourceName": "[Account Source]",
+
+                }
+            },
+            "attributeName": "[ Name of Attribute to Receive ]"
+            "processLevelSourceName": ""
+        },
+        "id": "My Transform Name",
+        "type": "rule"
+    }
+
+  </Description>
+  <Signature returnType="String">
+    <Inputs>
+      <Argument name="processLevel" type="String">
+        <Description>Incoming Proccess Level</Description>
+      </Argument>
+      <Argument name="attributeName" type="String">
+        <Description>Attribute Name to retrieve</Description>
+      </Argument>
+      <Argument name="processLevelSourceName" type="String">
+        <Description>The Name of the Process Level Source</Description>
+      </Argument>
+    </Inputs>
+  </Signature>
+  <Source><![CDATA[
+import IdnRuleUtil;
+import sailpoint.rule.Account;
+
+// Created by Kevin Gorton, Sailpoint for FMOLHS
+
+/*
+ * Get Account Attribute Function
+ * Input:  String, String
+ * Output: String
+ */
+public String getAttributeByName( String processLevel, String attributeName ) {
+  // Retreive the Account matiching the process level
+  Account account = idn.getAccountByDisplayName(processLevelSourceName, processLevel);
+  
+  // retrieve the requested attribute from the account 
+  if (account != null ){
+    String attribute = account.getAttributes().get(attributeName);
+    return attribute;
+  }
+  //log.error("Process Level Mapping Generic Rule - Account with Process Level " + process level + " not found on source " + processLevelSourceName);
+  return "";
+}
+return getAttributeByName( processLevel, attributeName );
+
+  ]]></Source>
+</Rule>
